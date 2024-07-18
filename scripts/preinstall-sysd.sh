@@ -24,19 +24,19 @@ mkfs.fat -F 32 -n "EFISYSTEM" "${EFI}"
 # mount
 mount -t ext4 "${ROOT}" /mnt
 swapon "${SWAP}"
-mount -t fat "${EFI}" /mnt/boot/
+mount -t fat "${EFI}" /mnt/boot
 
 # mirrors
-
+curl https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4
 
 # packages
-pacstrap -K /mnt base linux linux-firmware intel-ucode sof-firmware networkmanager nano
+pacstrap -K /mnt base linux linux-firmware intel-ucode networkmanager sof-firmware nano
 
 genfstab -U /mnt >> /mnt/etc/fstab
 arch-chroot /mnt
-sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+sed -i 's/^#en_AU.UTF-8 UTF-8/en_AU.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
-echo "LANG=en_US.UTF-8" >> /etc/locale.conf
+echo "LANG=en_AU.UTF-8" >> /etc/locale.conf
 
 passwd
 
@@ -56,5 +56,9 @@ initrd /intel-ucode.img
 initrd /initramfs-linux.img
 options root=${ROOT} rw
 EOF
+
+systemctl enable NetworkManager
+exit
+umount -R /mnt
 
 echo "-----REBOOT-----"
