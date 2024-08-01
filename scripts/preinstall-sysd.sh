@@ -37,7 +37,7 @@ swapon "${SWAP}"
 mount -t fat "${EFI}" /mnt/boot
 
 # mirrors
-curl https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4 && 
+curl https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4
 
 pacstrap -K /mnt base linux linux-firmware intel-ucode networkmanager sof-firmware nano base-devel git curl
 
