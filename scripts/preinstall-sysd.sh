@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 
 lsblk
-read lsblk
 
-echo "Enter Root partition: "
+echo "Enter Root partition:"
 read ROOT
 
-echo "Enter Swap partition: "
+echo "Enter Swap partition:"
 read SWAP
 
-echo "Enter EFI partition: "
+echo "Enter EFI partition:"
 read EFI
 
 # format
@@ -32,8 +31,11 @@ arch-chroot /mnt
 sed -i 's/^#en_AU.UTF-8 UTF-8/en_AU.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 echo "LANG=en_AU.UTF-8" >> /etc/locale.conf
+sed -i 's/^#[extra]/[extra]' /etc/pacman.conf
+sed -i 's/^#Include = /etc/pacman.d/mirrorlist/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
 
-
+echo "hostname?"
+read $hostname
 if ! [ $hostname ]
 then
   hostname="arch"
@@ -48,6 +50,7 @@ pacman -Syu base-devel git efibootmgr
 useradd -m atops
 passwd atops
 usermod -aG wheel atops
+sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 
 
 bootctl install --path /mnt/boot
@@ -61,10 +64,6 @@ options root=${ROOT} rw
 EOF
 
 systemctl enable NetworkManager
-
-echo "Choose a Desktop Environment"
-echo "1. None"
-echo "2. KDE"
 
 exit
 umount -R /mnt
