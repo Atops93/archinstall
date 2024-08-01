@@ -51,14 +51,7 @@ echo "LANG=en_AU.UTF-8" >> /etc/locale.conf
 sed -i 's/^#[extra]/[extra]' /etc/pacman.conf
 sed -i 's/^#Include = /etc/pacman.d/mirrorlist/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
 
-echo "hostname?"
-read $hostname
-if ! [ $hostname ]
-then
-  hostname="arch"
-fi
-
-echo $hostname >> /etc/hostname
+echo atops-btw >> /etc/hostname
 
 passwd
 
