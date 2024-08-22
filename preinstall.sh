@@ -364,7 +364,7 @@ echo "Installing GRUB to the disk of the RootFS."
 	arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 
-######################################################################################################################################################
+##############################################################################################################################
 
 
 # Network
@@ -382,11 +382,10 @@ echo "Are you finished?"
 EOF
 		echo -n "Pick one: "; read -r finished-install
 		case "$finish-install" in
-			if [[y]]; then
+			if [[ y ]] ; then
 			umount -R /mnt
 			sleep 5
 			reboot
-					continue
 				fi
 			"n")
 			exit
