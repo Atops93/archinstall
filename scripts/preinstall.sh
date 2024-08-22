@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-lsblk
-
 partEsp() {
 	if [ "$uefi" = "true" ]; then
 		until [[ "$esp" == "/dev/"* ]] && [ -b "$esp" ]; do
@@ -102,12 +100,13 @@ installerSetup() {
 		fi
 		echo
 
+    		lsblk
 		echo "Would you like to change any of these?"
 		cat << EOF
 1. EFI System Partition
 2. RootFS
 3. Swap
-4. Go back to terminal to fix anything?
+4. Use terminal to fix anything?
 5. Continue Installer
 
 EOF
@@ -211,54 +210,51 @@ EOF
 
 
 
+###################################################################################################
 
 
+##################################
+#####	FIX THE BOOTLOADER #######
+##################################
 
 
-
-
-
-
-
-
-
-echo "Enter Root partition:"
-read ROOT
-
-echo "Enter Swap partition:"
-read SWAP
-
-echo "Enter EFI partition:"
-read EFI
 
 
 while true; do
-    echo "Choose Bootloader Along with correct cpu microcode"
-    echo "1. Systemdboot - intel microcode"
-    echo "2. Systemdboot - amd microcode"
-    echo "3. GRUB - Auto detects"
-    read BOOT
+    echo "Choose a bootloader"
+    echo "(1) Systemdboot & choose ur microcode" read SYSD-UCODE-OPTION
+    echo "(2) GRUB - Auto detects microcode | Recommended"
+    if [[2]] ; then
+    	read BOOT
 
     # Check if input is either 1 or 2
-    if [[ $BOOT == 1 || $BOOT == 2 ]] ; then
+    if [[ $BOOT == 1 || $BOOT == 2]] ; then
         break
     else
-        echo "Enter either 1 or 2."
+        echo "Enter an option"
     fi
 done
 
-# format
-mkfs.btrfs -L "ROOT" "${ROOT}"
-mkswap "${SWAP}"
-mkfs.fat -F 32 -n "EFISYSTEM" "${EFI}"
+# Systemd boot
+$SYSD-UCODE-OPTION
+	echo "(1) Systemdboot - intel microcode"
+	echo "(2) Systemdboot - amd microcode"
 
-# mount
-mount -t btrfs "${ROOT}" /mnt
-swapon "${SWAP}"
-mount -t fat "${EFI}" /mnt/boot/efi
+
+
+
+#######################################################
+
+
+
+#######################################
+######	    FIX THE MIRRORS	#######
+#######################################
 
 # mirrors
 lynx https://archlinux.org/mirrorlist/?country=AU&protocol=https&ip_version=4&use_mirror_status=on
+
+####################################################################################################
 
 # Core packages
 pacstrap /mnt base linux linux-firmware linux-headers intel-ucode networkmanager sof-firmware neovim base-devel git
@@ -290,28 +286,38 @@ echo "Root password?"
 until [ "$useTesting" = "y" ] || [ "$useTesting" = "n" ]; do
 		echo -n "using the testing repos? (y/n)"; read -r useTesting
 	done
+echo "Enter your user: "
+until $USER; do
+	echo "Enter a user stupid"; read -r USER
+ done
+useradd -m $USER
 
-useradd -m atops
-passwd atops
-usermod -aG wheel atops
+echo "Enter user password:"
+passwd $USER
+
+echo "The only group this user is in is in currently is wheel as every mf adds their user to that group. You can add ur user to more groups after install finishes if desired."
+usermod -aG wheel $USER
 sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 
 # Multilib
-echo "Do you want to enable the multilib repo? Meaning do you plan on using 32 bit software?"
-if [[y]]; then
 sed -i 's/^#[multilib]/[multilib]' /etc/pacman.conf
 sed -i 's/^#Include = /etc/pacman.d/mirrorlist/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
 
 # Chaotic aur
-echo "Do you want the chaotic-aur repo?"
-if [[Y]]; then
-[chaotic-aur]
-sed -i 's/[multilib]' /etc/pacman.conf
-sed -i 's/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
+echo "Do you want the chaotic-aur repo? (y/n)"
+if [[y]]; then
+echo "[chaotic-aur]" >> /etc/pacman.conf
+echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
+else
 
+
+###########################################################################################################
+
+###### FIX BOOTLOADER #######
 
 # Intel microcode for systemd
-if [[ $BOOT == 1 ]]; then
+
+if [[ $BOOT == 2 ]]; then
 bootctl install --path=/boot
 echo "default arch.conf" >> /mnt/boot/loader/loader.conf
 cat <<EOF > /mnt/boot/loader/entries/arch.conf
@@ -323,7 +329,7 @@ options root=${ROOT} rw
 EOF
 
 # amd microcode for systemd
-if [[ $BOOT == 2 ]]; then
+if [[ $BOOT == 3 ]]; then
 bootctl install --path=/boot
 echo "default arch.conf" >> /mnt/boot/loader/loader.conf
 cat <<EOF > /mnt/boot/loader/entries/arch.conf
@@ -334,12 +340,12 @@ initrd /initramfs-linux.img
 options root=${ROOT} rw
 EOF
 
-else [[ $BOOT == 1 ]]; then
+if [[ $BOOT == 1 ]]; then
     pacman -S grub efibootmgr
     grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id="Arch-Btw"
     grub-mkconfig -o /boot/grub/grub.cfg
     sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=1/' -i /mnt/etc/default/grub
-fi
+EOF
 
 echo "Installing GRUB to the disk of the RootFS."
 	if [ "$uefi" = "true" ]; then
@@ -347,7 +353,7 @@ echo "Installing GRUB to the disk of the RootFS."
 		arch-chroot /mnt pacman -S --noconfirm --needed efibootmgr
 		echo "installing grub"
 		if ! arch-chroot /mnt grub-install --efi-directory=/boot; then
-			echo "ERROR: grub-install failed!  The error should be above."
+			echo "ERROR: grub-install failed! Its either womp womp or skill issue, Most likely skill issue."
 			sleep 30
 		fi
 
@@ -358,37 +364,29 @@ echo "Installing GRUB to the disk of the RootFS."
 	arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 
+######################################################################################################################################################
 
 
-# Setup network
+# Network
 systemctl enable NetworkManager
 
 
+#####################################
 
+######### FIX REBOOT OPTIONS #######
 
-
-echo "Are you finished? y/n"
+echo "Are you finished?"
 		cat << EOF
-Y. Reboot & Continue to post install script?
-N. Use terminal to fix anything?
+(1) Reboot & Continue to post install script?
+(2) Use terminal to fix anything? Should be good for a reboot but option is here in case the user wants to double check everything is set up?
 EOF
 		echo -n "Pick one: "; read -r finished-install
 		case "$finish-install" in
-			"y")
-				
+			if [[y]]; then
+			umount -R /mnt
+			sleep 5
+			reboot
 					continue
 				fi
-				unset esp format_esp
-				partEsp
-				;;
 			"n")
-
-
-
-
-	
-	if [[y]]; then
-	umount -R /mnt
-	sleep 5
-	reboot
- }
+			exit
