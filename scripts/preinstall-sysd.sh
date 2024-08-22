@@ -61,7 +61,7 @@ usermod -aG wheel atops
 sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 
 if [[ $BOOT == 1 ]]; then
-bootctl install --path=/boot
+bootctl install --path=/efi
 echo "default arch.conf" >> /mnt/boot/loader/loader.conf
 cat <<EOF > /mnt/boot/loader/entries/arch.conf
 title  Arch Linux
@@ -72,7 +72,7 @@ options root=${ROOT} rw
 EOF
 else
     pacman -S grub efibootmgr
-    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id="Linux Boot Manager"
+    grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id="Linux Boot Manager"
     grub-mkconfig -o /boot/grub/grub.cfg
 fi
 
