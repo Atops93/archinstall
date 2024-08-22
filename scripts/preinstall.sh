@@ -167,7 +167,7 @@ EOF
 
 	if [ "$format_rootfs" = "y" ]; then
 		wipefs -a "$rootfs"
-		mkfs.ext4 "$rootfs"
+		mkfs.btrfs "$rootfs"
 	fi
 
 	if [ "$format_esp" = "y" ]; then
@@ -233,13 +233,14 @@ read EFI
 
 
 while true; do
-    echo "Choose Bootloader"
-    echo "1. Systemdboot"
-    echo "2. GRUB"
+    echo "Choose Bootloader Along with correct cpu microcode"
+    echo "1. Systemdboot - intel microcode"
+    echo "2. Systemdboot - amd microcode"
+    echo "3. GRUB - Auto detects"
     read BOOT
 
     # Check if input is either 1 or 2
-    if [[ $BOOT == 1 || $BOOT == 2 ]]; then
+    if [[ $BOOT == 1 || $BOOT == 2 ]] ; then
         break
     else
         echo "Enter either 1 or 2."
@@ -252,13 +253,12 @@ mkswap "${SWAP}"
 mkfs.fat -F 32 -n "EFISYSTEM" "${EFI}"
 
 # mount
-mount -t ext4 "${ROOT}" /mnt
+mount -t btrfs "${ROOT}" /mnt
 swapon "${SWAP}"
 mount -t fat "${EFI}" /mnt/boot/efi
 
 # mirrors
-lynx https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4
-mv
+lynx https://archlinux.org/mirrorlist/?country=AU&protocol=https&ip_version=4&use_mirror_status=on
 
 # Core packages
 pacstrap /mnt base linux linux-firmware linux-headers intel-ucode networkmanager sof-firmware neovim base-devel git
@@ -277,18 +277,18 @@ echo 'LANG=en_AU.UTF-8' > /mnt/etc/locale.conf
 
 # Hostname
 if [ "$hostname" = "" ]; then
-		echo -n "Enter the system hostname dummy: "; read -r hostname
+		echo -n "Enter a hostname dummy: "; read -r hostname
 fi
 echo "$hostname" > /mnt/etc/hostname
 
 # Setting up user
-echo "set root password"
+echo "Root password?"
 	until arch-chroot /mnt passwd; do
-		echo "Password set failed.  Please try again."
+		echo "Set a password u dumbass."
 	done
 
 until [ "$useTesting" = "y" ] || [ "$useTesting" = "n" ]; do
-		echo -n "Would you like to use the testing repos? (y/n)"; read -r useTesting
+		echo -n "using the testing repos? (y/n)"; read -r useTesting
 	done
 
 useradd -m atops
@@ -310,7 +310,7 @@ sed -i 's/[multilib]' /etc/pacman.conf
 sed -i 's/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
 
 
-# Bootloader
+# Intel microcode for systemd
 if [[ $BOOT == 1 ]]; then
 bootctl install --path=/boot
 echo "default arch.conf" >> /mnt/boot/loader/loader.conf
@@ -322,16 +322,73 @@ initrd /initramfs-linux.img
 options root=${ROOT} rw
 EOF
 
-else
+# amd microcode for systemd
+if [[ $BOOT == 2 ]]; then
+bootctl install --path=/boot
+echo "default arch.conf" >> /mnt/boot/loader/loader.conf
+cat <<EOF > /mnt/boot/loader/entries/arch.conf
+title  Arch Linux
+linux  /vmlinuz-linux
+initrd /amd-ucode.img
+initrd /initramfs-linux.img
+options root=${ROOT} rw
+EOF
+
+else [[ $BOOT == 1 ]]; then
     pacman -S grub efibootmgr
     grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id="Arch-Btw"
     grub-mkconfig -o /boot/grub/grub.cfg
     sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=1/' -i /mnt/etc/default/grub
 fi
 
+echo "Installing GRUB to the disk of the RootFS."
+	if [ "$uefi" = "true" ]; then
+		echo "installing efibootmgr"
+		arch-chroot /mnt pacman -S --noconfirm --needed efibootmgr
+		echo "installing grub"
+		if ! arch-chroot /mnt grub-install --efi-directory=/boot; then
+			echo "ERROR: grub-install failed!  The error should be above."
+			sleep 30
+		fi
+
+	else
+		arch-chroot /mnt grub-install $(partToDisk "$rootfs")
+	fi
+	sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=1/' -i /mnt/etc/default/grub
+	arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+
+
+
+
+# Setup network
 systemctl enable NetworkManager
 
-exit
-umount -R /mnt
 
-echo "-----REBOOT-----"
+
+
+
+echo "Are you finished? y/n"
+		cat << EOF
+Y. Reboot & Continue to post install script?
+N. Use terminal to fix anything?
+EOF
+		echo -n "Pick one: "; read -r finished-install
+		case "$finish-install" in
+			"y")
+				
+					continue
+				fi
+				unset esp format_esp
+				partEsp
+				;;
+			"n")
+
+
+
+
+	
+	if [[y]]; then
+	umount -R /mnt
+	sleep 5
+	reboot
+ }
