@@ -201,59 +201,16 @@ EOF
 		fi
 	fi
 
-
-
-
-
-
-
-
-
-
-###################################################################################################
-
-
-##################################
-#####	FIX THE BOOTLOADER #######
-##################################
-
-
-
-
-while true; do
-    echo "Choose a bootloader"
-    echo "(1) Systemdboot & choose ur microcode" read SYSD-UCODE-OPTION
-    echo "(2) GRUB - Auto detects microcode | Recommended"
-    if [[2]] ; then
-    	read BOOT
-
-    # Check if input is either 1 or 2
-    if [[ $BOOT == 1 || $BOOT == 2]] ; then
-        break
-    else
-        echo "Enter an option"
-    fi
-
-# Systemd boot
-$SYSD-UCODE-OPTION
-	echo "(1) Systemdboot - intel microcode"
-	echo "(2) Systemdboot - amd microcode"
-
-
-
-
-#######################################################
-
-
-
-#######################################
-######	    FIX THE MIRRORS	    #######
-#######################################
-
 # mirrors
 lynx https://archlinux.org/mirrorlist/?country=AU&protocol=https&ip_version=4&use_mirror_status=on
 
-####################################################################################################
+sleep 30
+
+sudo mv mirrorlist /etc/pacman.d/mirrorlist
+
+vi /etc/pacman.d/mirrorlist
+
+sleep 30
 
 # Core packages
 pacstrap /mnt base linux linux-firmware linux-headers intel-ucode networkmanager sof-firmware neovim base-devel git
@@ -282,9 +239,6 @@ echo "Root password?"
 		echo "Set a password u dumbass."
 	done
 
-until [ "$useTesting" = "y" ] || [ "$useTesting" = "n" ]; do
-		echo -n "using the testing repos? (y/n)"; read -r useTesting
-	done
 echo "Enter your user: "
 until $USER; do
 	echo "Enter a user stupid"; read -r USER
@@ -301,80 +255,30 @@ sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 sed -i 's/^#[multilib]/[multilib]' /etc/pacman.conf
 sed -i 's/^#Include = /etc/pacman.d/mirrorlist/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
 
-# Chaotic aur
-echo "Do you want the chaotic-aur repo? (y/n)"
-if [[y]]; then
 echo "[chaotic-aur]" >> /etc/pacman.conf
 echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
-else
-
-
-###########################################################################################################
-
-###### FIX BOOTLOADER #######
-
-# Intel microcode for systemd
-
-if [[ $BOOT == 2 ]]; then
-bootctl install --path=/boot
-echo "default arch.conf" >> /mnt/boot/loader/loader.conf
-cat <<EOF > /mnt/boot/loader/entries/arch.conf
-title  Arch Linux
-linux  /vmlinuz-linux
-initrd /intel-ucode.img
-initrd /initramfs-linux.img
-options root=${ROOT} rw
-EOF
-
-# amd microcode for systemd
-if [[ $BOOT == 3 ]]; then
-bootctl install --path=/boot
-echo "default arch.conf" >> /mnt/boot/loader/loader.conf
-cat <<EOF > /mnt/boot/loader/entries/arch.conf
-title  Arch Linux
-linux  /vmlinuz-linux
-initrd /amd-ucode.img
-initrd /initramfs-linux.img
-options root=${ROOT} rw
-EOF
-
-if [[ $BOOT == 1 ]]; then
-    pacman -S grub efibootmgr
-    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id="Arch-Btw"
-    grub-mkconfig -o /boot/grub/grub.cfg
-    sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=1/' -i /mnt/etc/default/grub
-EOF
 
 echo "Installing GRUB to the disk of the RootFS."
 	if [ "$uefi" = "true" ]; then
 		echo "installing efibootmgr"
-		arch-chroot /mnt pacman -S --noconfirm --needed efibootmgr
+		arch-chroot /mnt pacman -S grub efibootmgr
 		echo "installing grub"
 		if ! arch-chroot /mnt grub-install --efi-directory=/boot; then
 			echo "ERROR: grub-install failed! Its either womp womp or skill issue, Most likely skill issue."
 			sleep 30
 		fi
 
-	else
-		arch-chroot /mnt grub-install $(partToDisk "$rootfs")
-	fi
 	sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=1/' -i /mnt/etc/default/grub
 	arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
-
-
-##############################################################################################################################
 
 
 # Network
 systemctl enable NetworkManager
 
-
-#####################################
-
 echo "Are you finished?"
 		cat << EOF
 (1) Reboot & Continue to post install script?
-(2) Use terminal to fix anything? Ctrl + D or Ctrl + C?
+(2) Use terminal to fix anything? ctrl+D or ctrl+C?
 EOF
 if [[1]] ; then
 		umount -R /mnt
