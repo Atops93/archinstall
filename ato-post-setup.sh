@@ -11,7 +11,10 @@ git clone https://aur.archlinux.org/yay.git
 cd yay
 makepkg -si
 cd
-sudo pacman -Syu xorg-xinit xorg-server firefox wget curl lynx gcc glava thunar gvfs picom openssh flameshot alacritty btop htop qemu-full rofi 
+yay -S xorg-xinit xorg-server firefox wget curl lynx gcc glava thunar gvfs picom openssh flameshot alacritty btop htop qemu-full rofi dxvk-bin cava cmatrix-git
+
+sudo echo "[chaotic-aur]" >> /etc/pacman.conf
+sudo echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
 
 ####################################################################
 #### I DID SAY AFTER ALL, THIS IS MY METHOD OF SETTING SHIT UP! ####

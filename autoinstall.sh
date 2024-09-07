@@ -206,9 +206,8 @@ lynx https://archlinux.org/mirrorlist/?country=AU&protocol=https&ip_version=4&us
 
 sleep 30
 
-sudo mv mirrorlist /etc/pacman.d/mirrorlist
-
-vi /etc/pacman.d/mirrorlist
+mv mirrorlist /etc/pacman.d/mirrorlist
+vim /etc/pacman.d/mirrorlist
 
 sleep 30
 
@@ -216,7 +215,6 @@ sleep 30
 pacstrap /mnt base linux linux-firmware linux-headers intel-ucode networkmanager sof-firmware neovim base-devel git
 
 genfstab -U /mnt >> /mnt/etc/fstab
-
 arch-chroot /mnt
 
 # Locale
@@ -254,9 +252,6 @@ sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 # Multilib
 sed -i 's/^#[multilib]/[multilib]' /etc/pacman.conf
 sed -i 's/^#Include = /etc/pacman.d/mirrorlist/Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf
-
-echo "[chaotic-aur]" >> /etc/pacman.conf
-echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
 
 echo "Installing GRUB to the disk of the RootFS."
 	if [ "$uefi" = "true" ]; then
