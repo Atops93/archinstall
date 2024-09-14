@@ -212,7 +212,7 @@ vim /etc/pacman.d/mirrorlist
 sleep 30
 
 # Core packages
-pacstrap /mnt base linux linux-firmware linux-headers intel-ucode networkmanager sof-firmware neovim base-devel git
+pacstrap /mnt base linux linux-firmware linux-headers intel-ucode networkmanager sof-firmware btrfs-progs neovim base-devel git
 
 genfstab -U /mnt >> /mnt/etc/fstab
 arch-chroot /mnt
