@@ -35,9 +35,10 @@ dots() {
 	echo -n "$2"
 	sleep 0.25
 }
+echo "Techflash autosetup script v0.0.3"
 echo -e "\e[1;33m======= WARNING!!! =======\e[0m"
-echo "This script will set up this machine my WAY"
-echo "If you want to cancel at any time, remember to press ctrl + C | You have 5 seconds before the installer starts."
+echo "This script will set up your PC exactly like I set up mine."
+echo "If you're not sure about this, please back out now.  I'll give you 5 seconds."
 dots "\e[32m5" "."
 dots "4" "."
 dots "\e[1;33m3" "."
@@ -141,7 +142,7 @@ installerSetup() {
 		uefi=true
 	fi
 
-	echo "Input your partitions. MAKE SURE YOU CREATED THE PARTITIONS! This process formats & mounts the partitions."
+	echo "Please input your partitions.  I trust you've already created & sized them to your liking."
 
 	partEsp
 	partRoot
@@ -242,7 +243,7 @@ EOF
 	fstrim /mnt
 
 	if [ "$uefi" = "true" ]; then
-		mount "$esp" /mnt/boot/efi --mkdir
+		mount "$esp" /mnt/boot --mkdir
 	fi
 
 	if [ "$swapfile" = "true" ] && [ "$swap" != "none" ]; then
@@ -265,19 +266,87 @@ EOF
 	sed 's/#Color/Color/' -i /etc/pacman.conf
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
 
-	echo "Setting up MY mirrors."
-#	lynx https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4
-#	fi
-#	mv mirrorlist /etc/pacman.d/
-#	chmod 755 /etc/pacman.d/mirrorlist
-	curl -o /etc/pacman.d/mirrorlist https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4; lynx /etc/pacman.d/mirrorlist
-	sleep 15; chmod 755 /etc/pacman.d/mirrorlist
+	until [ "$useCache" = "y" ] || [ "$useCache" = "n" ]; do
+		echo -n "Are you on the LAN and would like to use the package caching server? (y/n)"; read -r useCache
+	done
+	
+	until [ "$useTesting" = "y" ] || [ "$useTesting" = "n" ]; do
+		echo -n "Would you like to use the testing repos? (y/n)"; read -r useTesting
+	done
 
+	if [ "$useCache" = "y" ]; then
+		# could resolved
+		rm /etc/resolv.conf
+		cat << EOF > /etc/resolv.conf
+search shack.lan
+nameserver 172.16.5.254
+EOF
+	fi
+
+	# FAST PATH!  If both are no, don't modify the file at all!
+	if [ "$useCache" = "y" ] || [ "$useTesting" = "y" ]; then
+		# remove all lines after and including the line that maches '[core-testing]'.
+		if [ "$useCache" = "y" ]; then
+			# If the user wanted testing repos, we modify it after this.
+			sed -n '/\[core-testing\]/q;p' -i /etc/pacman.conf
+			cat << EOF >> /etc/pacman.conf
+#[core-testing]
+#Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+
+[core]
+Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+
+#[extra-testing]
+#Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+
+[extra]
+Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+EOF
+		fi
+
+		if [ "$useTesting" = "y" ]; then
+			# It's ugly, but it works
+			cp /etc/pacman.conf file.txt
+			perl -p -e 's/#\[core-testing\]\n/[core-testing]\n/' file.txt > file2.txt
+			sed 's/#Server/Server/' -i file2.txt
+			sed 's/#Include/Include/' -i file2.txt
+			mv file2.txt file.txt
+
+			perl -p -e 's/#\[extra-testing\]\n/[extra-testing]\n/' file.txt > file2.txt
+			sed 's/#Server/Server/' -i file2.txt
+			sed 's/#Include/Include/' -i file2.txt
+			# Move it into the original
+			rm file.txt
+			mv file2.txt /etc/pacman.conf
+		fi
+
+
+		if [ "$useCache" = "y" ]; then
+			# add the original footer back, we deleted it before.
+			cat << EOF >> /etc/pacman.conf
+
+# If you want to run 32 bit applications on your x86_64 system,
+# enable the multilib repositories as required here.
+
+#[multilib-testing]
+#Include = /etc/pacman.d/mirrorlist
+
+#[multilib]
+#Include = /etc/pacman.d/mirrorlist
+
+# An example of a custom package repository.  See the pacman manpage for
+# tips on creating your own repositories.
+#[custom]
+#SigLevel = Optional TrustAll
+#Server = file:///home/custompkgs
+EOF
+		fi
+	fi
 
 	echo "pacman.conf set up.  running \`pacstrap'."
 
 	# install core packages
-	pacstrap -K /mnt base linux linux-firmware grub linux-headers sof-firmware
+	pacstrap -K /mnt base linux linux-firmware grub
 
 	# copy our pacman config over
 	cp /etc/pacman.conf /mnt/etc/pacman.conf
@@ -285,27 +354,28 @@ EOF
 	# make an fstab
 	genfstab /mnt >> /mnt/etc/fstab
 
+
 	# set the timezone
-	ln -sf /usr/share/zoneinfo/Australia/Adelaide /mnt/etc/localtime
+	ln -sf /usr/share/zoneinfo/Region/City /mnt/etc/localtime
 	
 	# set the clock
 	arch-chroot /mnt hwclock --systohc
 
 	# set up locale.gen
-	sed 's/#en_AU.UTF-8 UTF-8/en_AU.UTF-8 UTF-8/' -i /mnt/etc/locale.gen
-	sed 's/#en_AU ISO-8859-1/en_AU ISO-8859-1/' -i /mnt/etc/locale.gen
+	sed 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' -i /mnt/etc/locale.gen
+	sed 's/#en_US ISO-8859-1/en_US ISO-8859-1/' -i /mnt/etc/locale.gen
 
 	# generate the locales
 	arch-chroot /mnt locale-gen
 
 	# set up the locale config
-	echo 'LANG=en_AU.UTF-8' > /mnt/etc/locale.conf
+	echo 'LANG=en_US.UTF-8' > /mnt/etc/locale.conf
 
 
 	# set the system hostname
 	
 	if [ "$hostname" = "" ]; then
-		echo -n "Enter the hostname dumbass: "; read -r hostname
+		echo -n "Please enter the system hostname: "; read -r hostname
 	fi
 	echo "$hostname" > /mnt/etc/hostname
 
@@ -322,9 +392,9 @@ EOF
 	# rebuild the new, only default initramfs
 	arch-chroot /mnt mkinitcpio -P
 
-	echo "Set the root password"
+	echo "Please set the root password"
 	until arch-chroot /mnt passwd; do
-		echo "Idiot, setup your root password."
+		echo "Password set failed.  Please try again."
 	done
 
 	echo "Installing GRUB to the disk of the RootFS."
@@ -332,19 +402,20 @@ EOF
 		echo "installing efibootmgr"
 		arch-chroot /mnt pacman -S --noconfirm --needed efibootmgr
 		echo "installing grub"
-		if ! arch-chroot /mnt grub-install --efi-directory=/boot/efi; then
-			echo "ERROR: grub-install failed! Womp Womp. Well you gotta exit script and see what ur skill issue is."
+		if ! arch-chroot /mnt grub-install --efi-directory=/boot; then
+			echo "ERROR: grub-install failed!  The error should be above."
 			sleep 30
 		fi
 
 	else
 		arch-chroot /mnt grub-install $(partToDisk "$rootfs")
 	fi
-	sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/' -i /mnt/etc/default/grub
+	sed 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=1/' -i /mnt/etc/default/grub
 	sed 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet net.ifnames=0 biosdevname=0"/' -i /mnt/etc/default/grub
 			
 	arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
+	echo "Installing NetworkManager for networking after bootup."
 	arch-chroot /mnt pacman -S networkmanager --noconfirm --needed
 
 	echo "Enabling NetworkManager and disabling systemd-networkd and resolved."
@@ -352,7 +423,7 @@ EOF
 	arch-chroot /mnt systemctl disable systemd-resolved
 	arch-chroot /mnt systemctl enable NetworkManager
 
-	echo "Setting up install script to start after this is finished."
+	echo "Installing ourselves into the installed system so that we can run through a little bit more setup after a reboot."
 	cp "$ourself" /mnt/autosetup.sh
 
 	# just in case
@@ -367,7 +438,7 @@ ExecStart=/autosetup.sh --rm
 WantedBy=default.target
 EOF
 	until [ "$autostart" = "y" ] || [ "$autostart" = "n" ]; do
-		echo -n "If you will not have networking by default on boot (Wi-Fi), it would be unwise to start the remainder of the setup automatically. Would you like it to start automatically after reboot?  (y/n)"
+		echo -n "If you will not have networking by default on boot (Wi-Fi), it would be unwise to start the remainder of the setup automatically.  Would you like it to start automatically after reboot?  (y/n)"
 		read -r autostart
 	done
 	
@@ -375,8 +446,7 @@ EOF
 		arch-chroot /mnt systemctl enable autosetup
 	fi
 
-	echo "Rebooting!"
-	echo "Once restarted there will be a script that will run. DON'T interupt it until finished!!!"
+	echo "Rebooting.  See ya on the other side!"
 	sleep 5
 	reboot
 }
@@ -394,9 +464,9 @@ EOF
 # shellcheck disable=SC2317
 desktopSetup() {
 	pacman -S --noconfirm --needed sudo base-devel \
-	pipewire pipewire-pulse pavucontrol xorg-server xorg-xinit firefox
+	pipewire pipewire-pulse pavucontrol xorg-server xorg-xinit
 	
-	echo "Adding user & sudo setup"
+	echo "Adding user and sudo setup"
 	
 	if ! grep sudo /etc/group; then
 		groupadd -r sudo
@@ -404,19 +474,22 @@ desktopSetup() {
 	
 	sed -i 's/# %sudo	ALL=(ALL:ALL) ALL/%sudo	ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
 
-	if ! [ -d /home/atops ] || [ "$(su - atops -c groups 2>/dev/null | grep users | grep sudo | grep video | grep render)" == "" ]; then
-		useradd -m atops -c Atops -G users,sudo,video,render
+	if ! [ -d /home/techflash ] || [ "$(su - techflash -c groups 2>/dev/null | grep users | grep sudo | grep video | grep render)" == "" ]; then
+		useradd -m techflash -c Techflash -G users,sudo,video,render
 	fi
-	echo "Enter the password for the new user"
-	passwd atops
+	echo "Please enter the password for the new user"
+	passwd techflash
 
 	echo "Running dotfiles setup"
-	su - atops -c "mkdir -p src"
+	su - techflash -c "mkdir -p src"
+	chsh -s /bin/zsh techflash
 	
-	if ! [ -d /home/atops/ ]; then
-		su - atops -c "git clone https://github.com/atops93/ato-dwm"
+	if ! [ -d /home/techflash/src/dotfiles ]; then
+		su - techflash -c "git clone https://github.com/techflashYT/dotfiles src/dotfiles"
+	else
+		su - techflash -c "cd src/dotfiles; git pull"
 	fi
-	su - atops -c "cd ato-dwm; ./install.sh"
+	su - techflash -c "cd src/dotfiles; ./install.sh"
 
 
 	echo "Adding autologin to getty config"
@@ -424,7 +497,7 @@ desktopSetup() {
 	cat << EOF > /etc/systemd/system/getty@tty1.service.d/autologin.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin atops %I \$TERM
+ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin techflash %I \$TERM
 EOF
 }
 
@@ -454,7 +527,7 @@ mainSetup() {
 		echo -n "Setup type?  \"desktop\" or \"server\": "; read -r setuptype
 	done
 	echo "Installing packages..."
-	pacman -S --needed --noconfirm git rsync htop repo
+	pacman -S --needed --noconfirm git rsync htop
 	"${setuptype}"Setup
 
 	echo "DONE!  Restarting getty in 5 seconds!"

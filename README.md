@@ -3,3 +3,4 @@
 
 # (STILL IN PROGRESS.)
 
+ ```curl https://raw.githubusercontent.com/atops93/archinstall/main/install.sh```

@@ -11,22 +11,20 @@ git clone https://aur.archlinux.org/yay.git
 cd yay
 makepkg -si
 cd
-yay -S xorg-xinit xorg-server firefox wget curl lynx gcc glava thunar gvfs picom openssh flameshot alacritty btop htop qemu-full rofi dxvk-bin cava cmatrix-git
+yay -S firefox wget curl lynx gcc repo rsync glava thunar gvfs picom openssh flameshot alacritty btop htop qemu-full edk2-ovmf rofi dxvk-bin cava cmatrix-git jellyfin nginx cmus dosfstools mtools cmake pipewire lib32-pipewire wireplumber fastfetch meson musl p7zip unzip 
 
-sudo echo "[chaotic-aur]" >> /etc/pacman.conf
-sudo echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
+#sudo echo "[chaotic-aur]" >> /etc/pacman.conf
+#sudo echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
 
-####################################################################
-#### I DID SAY AFTER ALL, THIS IS MY METHOD OF SETTING SHIT UP! ####
-####################################################################
+##################################################################
+####  I DID SAY AT THE START THIS IS MY METHOD OF SETTING UP  ####
+##################################################################
 
-echo "1 Clone my dwm & use alacritty?"
-echo "2 Install kde without display manager? They are bloat."
-if [[1]] ; then
-	sudo pacman -S libx11 libxft libxinerama && git clone https://github.com/atops93/ato-dwm && cd ato-dwm && cd dwm && sudo make clean install && ./install.sh
-echo "3 Clone "
-echo "4 Clone "
-echo "5 Clone "
+echo "(1) Clone my dwm & use alacritty?" READ dwm
+echo "(2) Install kde without display manager & use startx instead?"
+echo "(3) Clone "
+echo "(4) Clone "
+echo "(5) Clone "
 
 
 
@@ -38,9 +36,9 @@ echo "5 Clone "
 
 
 if [[1]] ; then
-	git clone https://github.com/atops93/ato-dwm && cd ato-dwm && ./install.sh
+	sudo pacman -S xorg xorg-server xorg-xinit && git clone https://github.com/atops93/ato-dwm && cd ato-dwm && chmod +x install.sh && ./install.sh
 if [[2]] ; then
-	sudo pacman -S plasma-desktop
+	sudo pacman -S plasma-desktop && 
 if [[3]] ; then
 
 
