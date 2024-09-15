@@ -265,6 +265,8 @@ EOF
 	sed 's/#Color/Color/' -i /etc/pacman.conf
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
 
+	pacman -Sy pacman-contrib
+	pacstrap -K /mnt pacman-contrib
 	echo "Setting up MY mirrors."
 mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -n 5 - > /etc/pacman.d/mirrorlist
@@ -407,12 +409,13 @@ desktopSetup() {
 	passwd atops
 
 	echo "Running dotfiles setup"
-	su - atops -c "mkdir -p src"
 	
 	if ! [ -d /home/atops/ ]; then
-		su - atops -c "git clone https://github.com/atops93/ato-dwm"
+		su - atops -c "cd /home/$USER; git clone https://github.com/atops93/ato-dwm"
+	else
+		su - atops -c "cd ~/ato-dwm; git pull"
 	fi
-	su - atops -c "cd ato-dwm; ./install.sh"
+	su - atops -c "cd ~/ato-dwm; ./install.sh"
 
 
 	echo "Adding autologin to getty config"
