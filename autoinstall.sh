@@ -266,13 +266,9 @@ EOF
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
 
 	echo "Setting up MY mirrors."
-#	lynx https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4
-#	fi
-#	mv mirrorlist /etc/pacman.d/
-#	chmod 755 /etc/pacman.d/mirrorlist
-	curl -o /etc/pacman.d/mirrorlist https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4; lynx /etc/pacman.d/mirrorlist
-	sleep 15; chmod 755 /etc/pacman.d/mirrorlist
-
+mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -n 5 - > /etc/pacman.d/mirrorlist
+sudo pacman -Syyu
 
 	echo "pacman.conf set up.  running \`pacstrap'."
 
