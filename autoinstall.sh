@@ -224,7 +224,7 @@ EOF
 
 	if [ "$format_rootfs" = "y" ]; then
 		wipefs -a "$rootfs"
-		mkfs.ext4 "$rootfs"
+		mkfs.btrfs "$rootfs"
 	fi
 
 	if [ "$format_esp" = "y" ]; then
@@ -265,7 +265,7 @@ EOF
 	sed 's/#Color/Color/' -i /etc/pacman.conf
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
 
-	pacman -Sy pacman-contrib
+	pacman -Sy pacman-contrib --noconfirm --needed
 	pacstrap -K /mnt pacman-contrib
 	echo "Setting up MY mirrors."
 mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
@@ -275,7 +275,7 @@ sudo pacman -Syyu
 	echo "pacman.conf set up.  running \`pacstrap'."
 
 	# install core packages
-	pacstrap -K /mnt base linux linux-firmware grub linux-headers sof-firmware
+	pacstrap -K /mnt base linux linux-firmware grub linux-headers sof-firmware btrfs-progs
 
 	# copy our pacman config over
 	cp /etc/pacman.conf /mnt/etc/pacman.conf
@@ -303,7 +303,7 @@ sudo pacman -Syyu
 	# set the system hostname
 	
 	if [ "$hostname" = "" ]; then
-		echo -n "Enter the hostname dumbass: "; read -r hostname
+		echo -n "Enter the hostname: "; read -r hostname
 	fi
 	echo "$hostname" > /mnt/etc/hostname
 
@@ -411,7 +411,7 @@ desktopSetup() {
 	echo "Running dotfiles setup"
 	
 	if ! [ -d /home/atops/ ]; then
-		su - atops -c "cd /home/$USER; git clone https://github.com/atops93/ato-dwm"
+		su - atops -c "git clone https://github.com/atops93/ato-dwm /home/$USER"
 	else
 		su - atops -c "cd ~/ato-dwm; git pull"
 	fi
