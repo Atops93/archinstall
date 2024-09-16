@@ -375,7 +375,7 @@ EOF
 
 	echo "Rebooting!"
 	echo "Once restarted there will be a script that will run. DON'T interupt it until finished!!!"
-	sleep 5
+	sleep 3
 	reboot
 }
 
@@ -390,9 +390,8 @@ EOF
 
 # This is reachable via the variable call
 # shellcheck disable=SC2317
-desktopSetup() {
-	pacman -S --noconfirm --needed sudo base-devel \
-	pipewire pipewire-pulse pavucontrol xorg-server xorg-xinit firefox
+#desktopSetup() {
+	pacman -S --noconfirm --needed sudo base-devel pipewire pipewire-pulse pavucontrol xorg-server xorg-xinit firefox
 	
 	echo "Adding user & sudo setup"
 	
@@ -406,17 +405,7 @@ desktopSetup() {
 		useradd -m atops -c Atops -G users,sudo,video,render
 	fi
 	echo "Enter the password for the new user"
-	passwd atops
-
-	echo "Running dotfiles setup"
-	
-	if ! [ -d /home/atops/ ]; then
-		su - atops -c "git clone https://github.com/atops93/ato-dwm /home/$USER"
-	else
-		su - atops -c "cd ~/ato-dwm; git pull"
-	fi
-	su - atops -c "cd ~/ato-dwm; ./install.sh"
-
+	passwd $USER
 
 	echo "Adding autologin to getty config"
 	mkdir -p /etc/systemd/system/getty@tty1.service.d
@@ -425,13 +414,9 @@ desktopSetup() {
 ExecStart=
 ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin atops %I \$TERM
 EOF
-}
+#}
 
 # shellcheck disable=SC2317
-serverSetup() {
-	# TODO
-	echo
-}
 mainSetup() {
 	export TERM=linux
 	echo "Checking networking config..."
@@ -449,12 +434,12 @@ mainSetup() {
 		exit 1
 	fi
 
-	until [ "$setuptype" = "desktop" ] || [ "$setuptype" = "server" ]; do
-		echo -n "Setup type?  \"desktop\" or \"server\": "; read -r setuptype
-	done
+#	until [ "$setuptype" = "desktop" ] || [ "$setuptype" = "server" ]; do
+#		echo -n "Setup type?  \"desktop\" or \"server\": "; read -r setuptype
+#	done
 	echo "Installing packages..."
 	pacman -S --needed --noconfirm git rsync htop repo
-	"${setuptype}"Setup
+#	"${setuptype}"Setup
 
 	echo "DONE!  Restarting getty in 5 seconds!"
 	sleep 5
