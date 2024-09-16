@@ -3,4 +3,4 @@
 
 # (STILL IN PROGRESS.)
 
- ```curl https://raw.githubusercontent.com/atops93/archinstall/main/install.sh```
+ ```curl https://raw.githubusercontent.com/atops93/archinstall/main/autoinstall.sh -o autoinstall.sh```
