@@ -1,20 +1,3 @@
-#!/bin/bash
-#echo "enter your drive name, example /dev/sda or /dev/nvme0n1: " read driveletter
-# Mount EFI partition if in EFI mode
-#if [ "$efi" = true ]; then
-#    mkdir -p /mnt/boot/efi
-#    mount ${drive}1 /mnt/boot/efi
-#else
-#    mount ${drive}1 /mnt/boot
-#fi
-# Install essential packages
-#echo "Installing base system..."
-#pacstrap /mnt base linux linux-firmware linux-headers btrfs-progs sof-firmware
-# Generate fstab
-#echo "Generating fstab..."
-#genfstab -U /mnt >> /mnt/etc/fstab
-
-
 #!/bin/bash -e
 ourself="$PWD/$0"
 if [ "$(uname -a | grep -v Linux)" != "" ]; then
