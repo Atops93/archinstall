@@ -266,33 +266,27 @@ EOF
 	sed 's/#Color/Color/' -i /etc/pacman.conf
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
 
-echo "Setting up MY mirrors."
-setupMirrors
+#echo "Setting up MY mirrors."
+#setupMirrors
 
-setupMirrors() {
-    echo "Setting up mirrors for Australia..."
-
-    # Backup the current mirrorlist
-    cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-
+#setupMirrors() {
+#    echo "Setting up mirrors for Australia..."
+#
+#    # Backup the current mirrorlist
+#    cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+#
     # Fetch Australian mirrors, uncomment them, and rank by speed
-    curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | 
-        sed -e 's/^#Server/Server/' -e '/^#/d' > /etc/pacman.d/mirrorlist
+#    curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | 
+#        sed -e 's/^#Server/Server/' -e '/^#/d' > /etc/pacman.d/mirrorlist
+#
+#    # Optionally rank mirrors by speed
+#    if command -v rankmirrors > /dev/null; then
+#        echo "Ranking the mirrors by speed..."
+#        rankmirrors -n 5 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+#    fi
 
-    # Optionally rank mirrors by speed
-    if command -v rankmirrors > /dev/null; then
-        echo "Ranking the mirrors by speed..."
-        rankmirrors -n 5 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
-    fi
-
-    echo "Mirrors setup complete!"
-}
-
-#pacman -Sy pacman-contrib --noconfirm --needed
-#pacstrap -K /mnt pacman-contrib
-#mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-#curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -n 5 - > /etc/pacman.d/mirrorlist
-#sudo pacman -Syyu
+#    echo "Mirrors setup complete!"
+#}
 
 	echo "pacman.conf set up.  running \`pacstrap'."
 
@@ -413,7 +407,8 @@ EOF
 # This is reachable via the variable call
 # shellcheck disable=SC2317
 #desktopSetup() {
-	pacman -S --noconfirm --needed sudo base-devel pipewire lib32-pipewire pipewire-pulse wireplumber
+	pacman -S --noconfirm --needed sudo base-devel \
+	pipewire pipewire-pulse pavucontrol
 	
 	echo "Adding user & sudo setup"
 	
@@ -427,7 +422,19 @@ EOF
 		useradd -m atops -c Atops -G users,sudo,video,render
 	fi
 	echo "Enter the password for the new user"
-	passwd $USER
+	passwd atops
+
+	echo "Running dotfiles setup"
+	su - atops -c "mkdir -p src"
+	chsh -s /bin/zsh atops
+	
+	if ! [ -d /home/atops/src/dotfiles ]; then
+		su - atops -c "git clone https://github.com/techflashYT/dotfiles src/dotfiles"
+	else
+		su - atops -c "cd src/dotfiles; git pull"
+	fi
+	su - atops -c "cd src/dotfiles; ./install.sh"
+
 
 	echo "Adding autologin to getty config"
 	mkdir -p /etc/systemd/system/getty@tty1.service.d
@@ -460,7 +467,7 @@ mainSetup() {
 #		echo -n "Setup type?  \"desktop\" or \"server\": "; read -r setuptype
 #	done
 	echo "Installing packages..."
-	pacman -S --needed --noconfirm git mtools dosfstools
+	pacman -S --needed --noconfirm git rsync htop
 #	"${setuptype}"Setup
 
 	echo "DONE!  Restarting getty in 5 seconds!"
