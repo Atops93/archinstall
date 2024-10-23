@@ -16,6 +16,8 @@ if [ "$hostname_initial" = "archiso" ] && [ "$awkRet" = "0" ]; then
 	isArchISO=true
 fi
 
+
+
 if [ "$(tty)" != "/dev/tty1" ]; then
 	# set stuff up
 	systemctl disable --now getty@tty1
@@ -35,10 +37,10 @@ dots() {
 	echo -n "$2"
 	sleep 0.25
 }
+echo "Techflash autosetup script v0.0.3"
 echo -e "\e[1;33m======= WARNING!!! =======\e[0m"
-echo "This script will set up this machine my WAY!"
-echo "Remember to use cfdisk to create the partitions before hand."
-echo "If you want to cancel at any time, remember to press ctrl + C | You have 5 seconds before the installer starts."
+echo "This script will set up your PC exactly like I set up mine."
+echo "If you're not sure about this, please back out now.  I'll give you 5 seconds."
 dots "\e[32m5" "."
 dots "4" "."
 dots "\e[1;33m3" "."
@@ -142,7 +144,7 @@ installerSetup() {
 		uefi=true
 	fi
 
-	echo "Input your partitions. MAKE SURE YOU CREATED THE PARTITIONS! This process formats & mounts the partitions."
+	echo "Please input your partitions.  I trust you've already created & sized them to your liking."
 
 	partEsp
 	partRoot
@@ -225,7 +227,7 @@ EOF
 
 	if [ "$format_rootfs" = "y" ]; then
 		wipefs -a "$rootfs"
-		mkfs.btrfs "$rootfs"
+		mkfs.ext4 "$rootfs"
 	fi
 
 	if [ "$format_esp" = "y" ]; then
@@ -243,7 +245,7 @@ EOF
 	fstrim /mnt
 
 	if [ "$uefi" = "true" ]; then
-		mount "$esp" /mnt/boot/efi --mkdir
+		mount "$esp" /mnt/boot --mkdir
 	fi
 
 	if [ "$swapfile" = "true" ] && [ "$swap" != "none" ]; then
@@ -265,6 +267,83 @@ EOF
 	# enable color & parallel downloads in pacman.conf
 	sed 's/#Color/Color/' -i /etc/pacman.conf
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
+
+	until [ "$useCache" = "y" ] || [ "$useCache" = "n" ]; do
+		echo -n "Are you on the LAN and would like to use the package caching server? (y/n)"; read -r useCache
+	done
+	
+	until [ "$useTesting" = "y" ] || [ "$useTesting" = "n" ]; do
+		echo -n "Would you like to use the testing repos? (y/n)"; read -r useTesting
+	done
+
+	if [ "$useCache" = "y" ]; then
+		# could resolved
+		rm /etc/resolv.conf
+		cat << EOF > /etc/resolv.conf
+search shack.techflash.wtf
+nameserver 172.16.5.254
+EOF
+	fi
+
+	# FAST PATH!  If both are no, don't modify the file at all!
+	if [ "$useCache" = "y" ] || [ "$useTesting" = "y" ]; then
+		# remove all lines after and including the line that maches '[core-testing]'.
+		if [ "$useCache" = "y" ]; then
+			# If the user wanted testing repos, we modify it after this.
+			sed -n '/\[core-testing\]/q;p' -i /etc/pacman.conf
+			cat << EOF >> /etc/pacman.conf
+#[core-testing]
+#Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+
+[core]
+Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+
+#[extra-testing]
+#Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+
+[extra]
+Server = http://arch:9129/repo/archlinux/\$repo/os/\$arch
+EOF
+		fi
+
+		if [ "$useTesting" = "y" ]; then
+			# It's ugly, but it works
+			cp /etc/pacman.conf file.txt
+			perl -p -e 's/#\[core-testing\]\n/[core-testing]\n/' file.txt > file2.txt
+			sed 's/#Server/Server/' -i file2.txt
+			sed 's/#Include/Include/' -i file2.txt
+			mv file2.txt file.txt
+
+			perl -p -e 's/#\[extra-testing\]\n/[extra-testing]\n/' file.txt > file2.txt
+			sed 's/#Server/Server/' -i file2.txt
+			sed 's/#Include/Include/' -i file2.txt
+			# Move it into the original
+			rm file.txt
+			mv file2.txt /etc/pacman.conf
+		fi
+
+
+		if [ "$useCache" = "y" ]; then
+			# add the original footer back, we deleted it before.
+			cat << EOF >> /etc/pacman.conf
+
+# If you want to run 32 bit applications on your x86_64 system,
+# enable the multilib repositories as required here.
+
+#[multilib-testing]
+#Include = /etc/pacman.d/mirrorlist
+
+#[multilib]
+#Include = /etc/pacman.d/mirrorlist
+
+# An example of a custom package repository.  See the pacman manpage for
+# tips on creating your own repositories.
+#[custom]
+#SigLevel = Optional TrustAll
+#Server = file:///home/custompkgs
+EOF
+		fi
+	fi
 
 #echo "Setting up MY mirrors."
 #setupMirrors
