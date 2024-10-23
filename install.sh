@@ -376,7 +376,7 @@ EOF
 	# set the system hostname
 	
 	if [ "$hostname" = "" ]; then
-		echo -n "enter the hostname idiot: "; read -r hostname
+		echo -n "enter the hostname: "; read -r hostname
 	fi
 	echo "$hostname" > /mnt/etc/hostname
 
@@ -403,7 +403,7 @@ EOF
 		echo "installing efibootmgr"
 		arch-chroot /mnt pacman -S --noconfirm --needed efibootmgr
 		echo "installing grub"
-		if ! arch-chroot /mnt grub-install --efi-directory=/boot; then
+		if ! arch-chroot /mnt grub-install --efi-directory=/boot/efi; then
 			echo "ERROR: grub-install failed!  The error should be above."
 			sleep 30
 		fi
@@ -475,22 +475,22 @@ desktopSetup() {
 	
 	sed -i 's/# %sudo	ALL=(ALL:ALL) ALL/%sudo	ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
 
-	if ! [ -d /home/techflash ] || [ "$(su - techflash -c groups 2>/dev/null | grep users | grep sudo | grep video | grep render)" == "" ]; then
-		useradd -m techflash -c Techflash -G users,sudo,video,render
+	if ! [ -d /home/atops ] || [ "$(su - atops -c groups 2>/dev/null | grep users | grep sudo | grep video | grep render)" == "" ]; then
+		useradd -m atops -c Atops -G users,sudo,video,render
 	fi
 	echo "Please enter the password for the new user"
-	passwd techflash
+	passwd atops
 
 	echo "Running dotfiles setup"
-	su - techflash -c "mkdir -p src"
-	chsh -s /bin/zsh techflash
+	su - atops -c "mkdir -p src"
+	chsh -s /bin/zsh atops
 	
-	if ! [ -d /home/techflash/src/dotfiles ]; then
-		su - techflash -c "git clone https://github.com/techflashYT/dotfiles src/dotfiles"
+	if ! [ -d /home/atops/src/dotfiles ]; then
+		su - atops -c "git clone https://github.com/techflashYT/dotfiles src/dotfiles"
 	else
-		su - techflash -c "cd src/dotfiles; git pull"
+		su - atops -c "cd src/dotfiles; git pull"
 	fi
-	su - techflash -c "cd src/dotfiles; ./install.sh"
+	su - atops -c "cd src/dotfiles; ./install.sh"
 
 
 	echo "Adding autologin to getty config"
@@ -498,7 +498,7 @@ desktopSetup() {
 	cat << EOF > /etc/systemd/system/getty@tty1.service.d/autologin.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin techflash %I \$TERM
+ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin atops %I \$TERM
 EOF
 }
 
