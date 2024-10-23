@@ -1,42 +1,59 @@
 #!/bin/bash
-echo "enter your drive name, example /dev/sda or /dev/nvme0n1: " read driveletter
-
+#echo "enter your drive name, example /dev/sda or /dev/nvme0n1: " read driveletter
 # Mount EFI partition if in EFI mode
-if [ "$efi" = true ]; then
-    mkdir -p /mnt/boot/efi
-    mount ${drive}1 /mnt/boot/efi
-else
-    mount ${drive}1 /mnt/boot
-fi
-
+#if [ "$efi" = true ]; then
+#    mkdir -p /mnt/boot/efi
+#    mount ${drive}1 /mnt/boot/efi
+#else
+#    mount ${drive}1 /mnt/boot
+#fi
 # Install essential packages
-echo "Installing base system..."
-pacstrap /mnt base linux linux-firmware linux-headers btrfs-progs sof-firmware
-
+#echo "Installing base system..."
+#pacstrap /mnt base linux linux-firmware linux-headers btrfs-progs sof-firmware
 # Generate fstab
-echo "Generating fstab..."
-genfstab -U /mnt >> /mnt/etc/fstab
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#echo "Generating fstab..."
+#genfstab -U /mnt >> /mnt/etc/fstab
 
 
 #!/bin/bash -e
+ourself="$PWD/$0"
+if [ "$(uname -a | grep -v Linux)" != "" ]; then
+	echo "Why are you not on Linux?"
+	exit 1
+fi
+
+hostname_initial="$(cat /etc/hostname)"
+if [ -f /etc/motd ]; then
+	awk '/iwctl/ && /nmcli/ && /utility/ && /Wi-Fi, authenticate to the wireless network using the/' /etc/motd
+fi
+awkRet=$?
+
+isArchISO=false
+if [ "$hostname_initial" = "archiso" ] && [ "$awkRet" = "0" ]; then
+	isArchISO=true
+fi
+
+
+
+if [ "$(tty)" != "/dev/tty1" ]; then
+	# set stuff up
+	systemctl disable --now getty@tty1
+	
+	# boot up a new instance on TTY1
+	setsid sh -c 'exec /autosetup.sh <> /dev/tty1 >&0 2>&1'
+	exit 0
+fi
+
+dots() {
+	echo -ne "$1"
+	sleep 0.25
+	echo -n "$2"
+	sleep 0.25
+	echo -n "$2"
+	sleep 0.25
+	echo -n "$2"
+	sleep 0.25
+}
 echo -e "\e[1;33m======= WARNING!!! =======\e[0m"
 echo "This script will set up your PC exactly like I set up mine."
 echo "If you're not sure about this, please back out now.  I'll give you 5 seconds."
