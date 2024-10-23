@@ -36,7 +36,8 @@ dots() {
 	sleep 0.25
 }
 echo -e "\e[1;33m======= WARNING!!! =======\e[0m"
-echo "This script will set up this machine my WAY"
+echo "This script will set up this machine my WAY!"
+echo "Remember to use cfdisk to create the partitions before hand."
 echo "If you want to cancel at any time, remember to press ctrl + C | You have 5 seconds before the installer starts."
 dots "\e[32m5" "."
 dots "4" "."
@@ -265,12 +266,33 @@ EOF
 	sed 's/#Color/Color/' -i /etc/pacman.conf
 	sed 's/#ParallelDownloads = 5/ParallelDownloads = 25/' -i /etc/pacman.conf
 
-	pacman -Sy pacman-contrib --noconfirm --needed
-	pacstrap -K /mnt pacman-contrib
-	echo "Setting up MY mirrors."
-mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -n 5 - > /etc/pacman.d/mirrorlist
-sudo pacman -Syyu
+echo "Setting up MY mirrors."
+setupMirrors
+
+setupMirrors() {
+    echo "Setting up mirrors for Australia..."
+
+    # Backup the current mirrorlist
+    cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+
+    # Fetch Australian mirrors, uncomment them, and rank by speed
+    curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | 
+        sed -e 's/^#Server/Server/' -e '/^#/d' > /etc/pacman.d/mirrorlist
+
+    # Optionally rank mirrors by speed
+    if command -v rankmirrors > /dev/null; then
+        echo "Ranking the mirrors by speed..."
+        rankmirrors -n 5 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+    fi
+
+    echo "Mirrors setup complete!"
+}
+
+#pacman -Sy pacman-contrib --noconfirm --needed
+#pacstrap -K /mnt pacman-contrib
+#mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+#curl -s "https://archlinux.org/mirrorlist/?country=AU&protocol=http&protocol=https&ip_version=4" | sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -n 5 - > /etc/pacman.d/mirrorlist
+#sudo pacman -Syyu
 
 	echo "pacman.conf set up.  running \`pacstrap'."
 
@@ -303,7 +325,7 @@ sudo pacman -Syyu
 	# set the system hostname
 	
 	if [ "$hostname" = "" ]; then
-		echo -n "Enter the hostname: "; read -r hostname
+		echo -n "Enter the hostname mate: "; read -r hostname
 	fi
 	echo "$hostname" > /mnt/etc/hostname
 
@@ -374,7 +396,7 @@ EOF
 	fi
 
 	echo "Rebooting!"
-	echo "Once restarted there will be a script that will run. DON'T interupt it until finished!!!"
+	echo "Once restarted there will be a script that will run, DON'T interupt it until finished!"
 	sleep 3
 	reboot
 }
@@ -391,7 +413,7 @@ EOF
 # This is reachable via the variable call
 # shellcheck disable=SC2317
 #desktopSetup() {
-	pacman -S --noconfirm --needed sudo base-devel pipewire pipewire-pulse pavucontrol xorg-server xorg-xinit firefox
+	pacman -S --noconfirm --needed sudo base-devel pipewire lib32-pipewire pipewire-pulse wireplumber
 	
 	echo "Adding user & sudo setup"
 	
@@ -438,7 +460,7 @@ mainSetup() {
 #		echo -n "Setup type?  \"desktop\" or \"server\": "; read -r setuptype
 #	done
 	echo "Installing packages..."
-	pacman -S --needed --noconfirm git rsync htop repo
+	pacman -S --needed --noconfirm git mtools dosfstools
 #	"${setuptype}"Setup
 
 	echo "DONE!  Restarting getty in 5 seconds!"
